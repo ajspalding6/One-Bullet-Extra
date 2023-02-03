@@ -4,7 +4,6 @@ Yes I'm aware this drawing is terrible haha
 """
 
 # Set height and width of the window
-
 WIDTH = 1200
 HEIGHT = 1200
 
@@ -27,10 +26,8 @@ arcade.draw_circle_filled(1050, 1050, 50, arcade.csscolor.YELLOW)
 arcade.draw_circle_outline(1050, 1050, 52, arcade.csscolor.ORANGE, 8)
 arcade.draw_circle_outline(1050, 1050, 56, arcade.csscolor.RED, 4)
 
-
-
 # Head
-arcade.draw_ellipse_filled(125, 1100, 100, 60, arcade.csscolor.GREEN, 160)
+arcade.draw_ellipse_filled(125, 1100, 100, 60, arcade.csscolor.LIGHT_GREEN, 160)
 arcade.draw_ellipse_outline(125, 1100, 100, 60, arcade.csscolor.BLACK, 1, 160)
 
 # Eye
@@ -44,7 +41,7 @@ arcade.draw_ellipse_filled(285, 1050, 300, 80, arcade.csscolor.LIGHT_GREEN, 200)
 arcade.draw_ellipse_outline(285, 1050, 300, 80, arcade.csscolor.BLACK, 1, 200)
 
 # Body
-arcade.draw_lrtb_rectangle_filled(575, 800, 900, 780, arcade.csscolor.LIGHT_GREEN)
+arcade.draw_lrtb_rectangle_filled(575, 800, 900, 780, arcade.csscolor.GREEN)
 arcade.draw_lrtb_rectangle_outline(575, 800, 900, 780, arcade.csscolor.BLACK, 1)
 
 arcade.draw_circle_filled(500, 900, 150, arcade.csscolor.LIGHT_GREEN)
