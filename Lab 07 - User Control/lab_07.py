@@ -5,7 +5,7 @@ import arcade
 # --- Constants ---
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 800
-MOVEMENT_SPEED = 3
+MOVEMENT_SPEED = 5
 
 
 def draw_backboard(left, right, top, bottom, left1, right1, top1, bottom1,
@@ -69,13 +69,8 @@ def draw_net(x1, x2, y1, y2):
     arcade.draw_line(145, 445, 220, 445, arcade.csscolor.WHITE, 2)
 
 
-"""def ball_rotation():
-    bball = arcade.load_texture("bball")
-    arcade.draw_scaled_texture_rectangle(400, 400, bball, .03)"""
-
-
 class Ball:
-    def __init__(self, position_x, position_y, change_x, change_y, texture):
+    def __init__(self, position_x, position_y, change_x, change_y, texture, scale):
 
         # Take the parameters of the init function above,
         # and create instance variables out of them.
@@ -83,11 +78,11 @@ class Ball:
         self.position_y = position_y
         self.change_x = change_x
         self.change_y = change_y
-        self.texture = arcade.load_texture("bball")
+        self.texture = texture
+        self.scale = scale
 
     def draw(self):
-        """ Draw the balls with the instance variables we have. """
-
+        """ Draw the ball with the instance variables we have. """
 
         arcade.draw_scaled_texture_rectangle(self.position_x,
                                              self.position_y,
@@ -99,6 +94,42 @@ class Ball:
         self.position_y += self.change_y
         self.position_x += self.change_x
 
+    """def borders(self, position_x, position_y):
+        if position_x or position_y >= 800:
+            position_x = 799
+            position_y = 799
+            return position_y, position_x
+            
+            Attempting to declare borders
+            
+            """
+
+
+class Player:
+    def __init__(self, position_x2, position_y2, change_x2, change_y2, texture2, scale2):
+
+        # Take the parameters of the init function above,
+        # and create instance variables out of them.
+        self.position_x2 = position_x2
+        self.position_y2 = position_y2
+        self.change_x2 = change_x2
+        self.change_y2 = change_y2
+        self.texture2 = texture2
+        self.scale2 = scale2
+
+    def draw2(self):
+        """ Draw the player with the instance variables we have. """
+
+        arcade.draw_scaled_texture_rectangle(self.position_x2,
+                                             self.position_y2,
+                                             self.texture2,
+                                             self.scale2)
+
+    def update2(self):
+        # Move the player
+        self.position_y2 += self.change_y2
+        self.position_x2 += self.change_x2
+
 
 class MyGame(arcade.Window):
     """ Our Custom Window Class"""
@@ -109,43 +140,73 @@ class MyGame(arcade.Window):
         # Call the parent class initializer
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, "Lab 7 - User Control")
 
-        self.set_mouse_visible(False)
+        self.set_mouse_visible(True)
 
-        # Create our ball
-        ball = arcade.load_texture("bball")
-        self.ball = Ball(50, 50, ball, .3)
+        # Create the ball
+        self.ball = Ball(50, 50, 0, 0, arcade.load_texture("bball"), .03)
+        # Create the player
+        self.player = Player(50, 50, 0, 0, arcade.load_texture("kobe"), .14)
 
+    # Updates and moves the ball around
+    def update(self, delta_time):
+        self.ball.update()
+
+    # Updates and moves the player around
+    def update2(self):
+        self.player.update2()
+
+    # Beginning of user control
+        # Determines what key is pressed and what to do when it's pressed
+    def on_key_press(self, key, modifiers):
+        if key == arcade.key.A:
+            self.ball.change_x = -MOVEMENT_SPEED
+        elif key == arcade.key.D:
+            self.ball.change_x = MOVEMENT_SPEED
+        elif key == arcade.key.W:
+            self.ball.change_y = MOVEMENT_SPEED
+        elif key == arcade.key.S:
+            self.ball.change_y = -MOVEMENT_SPEED
+
+    # Determines what to do after the key is released
+    def on_key_release(self, key, modifiers):
+        """ Called whenever a user releases a key. """
+        if key == arcade.key.A or key == arcade.key.D:
+            self.ball.change_x = 0
+        elif key == arcade.key.W or key == arcade.key.S:
+            self.ball.change_y = 0
+
+    # Tracks the mouse
+        # Determines what to do if a button is pressed
+    def on_mouse_press(self, x, y, button, modifiers):
+        """ Called when the user presses a mouse button. """
+
+        if button == arcade.MOUSE_BUTTON_LEFT:
+            print("Left mouse button pressed at", x, y)
+        elif button == arcade.MOUSE_BUTTON_RIGHT:
+            print("Right mouse button pressed at", x, y)
+
+    # Determines what to do if a button is released
+    def on_mouse_motion(self, x, y, dx, dy):
+        """ Called to update our objects.
+        Happens approximately 60 times per second."""
+        self.player.position_x2 = x
+        self.player.position_y2 = y
+
+    # Draws/calls everything
     def on_draw(self):
         arcade.start_render()
+        self.ball.draw()
+        self.player.draw2()
         arcade.set_background_color(arcade.csscolor.LIGHT_GRAY)
         draw_backboard(100, 115, 700, 500, 20, 50, 650, 0, 50, 625, 100, 625, 6, 50, 575, 100, 575, 6)
         draw_rim(180, 547, 100, 20, 180)
         draw_net(146, 220, 465, 445)
-        self.ball.draw()
 
-    def update(self, delta_time):
-        self.ball.update()
-
-    def on_key_press(self, key, modifiers):
-        if key == arcade.key.LEFT:
-            self.ball.change_x = -MOVEMENT_SPEED
-        elif key == arcade.key.RIGHT:
-            self.ball.change_x = MOVEMENT_SPEED
-        elif key == arcade.key.UP:
-            self.ball.change_y = MOVEMENT_SPEED
-        elif key == arcade.key.DOWN:
-            self.ball.change_y = -MOVEMENT_SPEED
-
-    def on_key_release(self, key, modifiers):
-        """ Called whenever a user releases a key. """
-        if key == arcade.key.LEFT or key == arcade.key.RIGHT:
-            self.ball.change_x = 0
-        elif key == arcade.key.UP or key == arcade.key.DOWN:
-            self.ball.change_y = 0
+# Opens window and runs
 
 
 def main():
-    window = MyGame(800, 800, "Hi")
+    MyGame(800, 800, "Hi")
 
     arcade.run()
 
