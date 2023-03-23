@@ -6,10 +6,12 @@ PLAYER_SCALE = .8
 AMMO_SCALE = .07
 ZOMBIE_SCALE = .5
 AMMO_COUNT = 50
-ZOMBIE_COUNT = 25
+ZOMBIE_COUNT = 50
 
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 800
+
+MOVEMENT_SPEED = 5
 
 
 class Ammo(arcade.Sprite):
@@ -45,6 +47,25 @@ class Zombie(arcade.Sprite):
         self.circle_angle += self.circle_speed
 
 
+class Player(arcade.Sprite):
+    def update(self):
+
+        self.center_x += self.change_x
+        self.center_y += self.change_y
+
+        if self.left < 0:
+
+            self.left = 0
+
+        elif self.right > SCREEN_WIDTH - 1:
+            self.right = SCREEN_WIDTH - 1
+
+        if self.bottom < 0:
+            self.bottom = 0
+
+        elif self.top > SCREEN_HEIGHT - 1:
+            self.top = SCREEN_HEIGHT - 1
+
 
 class MyGame(arcade.Window):
 
@@ -53,11 +74,10 @@ class MyGame(arcade.Window):
 
         self.ammo_list = None
         self.player_list = None
+        self.zombie_list = None
 
         self.player_sprite = None
         self.score = 0
-
-        self.set_mouse_visible(False)
 
         arcade.set_background_color(arcade.color.SKY_BLUE)
 
@@ -68,9 +88,9 @@ class MyGame(arcade.Window):
 
         self.score = 0
 
-        self.player_sprite = arcade.Sprite("character_malePerson_idle.png", PLAYER_SCALE )
-        self.player_sprite.center_x = 50
-        self.player_sprite.center_y = 50
+        self.player_sprite = Player("character_malePerson_idle.png", PLAYER_SCALE )
+        self.player_sprite.center_x = 400
+        self.player_sprite.center_y = 400
         self.player_list.append(self.player_sprite)
 
         for i in range(AMMO_COUNT):
@@ -99,20 +119,19 @@ class MyGame(arcade.Window):
         arcade.start_render()
 
         self.ammo_list.draw()
-        self.player_list.draw()
         self.zombie_list.draw()
+
+
+        self.player_list.draw()
 
         score = f"Score: {self.score}"
         arcade.draw_text(score, 10, 20, arcade.color.WHITE, 14)
 
-    def on_mouse_motion(self, x, y, dx, dy):
-
-        self.player_sprite.center_x = x
-        self.player_sprite.center_y = y
 
     def update(self, delta_time):
-        self.ammo_list.update()
+        self.player_list.update()
         self.zombie_list.update()
+        self.ammo_list.update()
 
         ammo_hit_list = arcade.check_for_collision_with_list(self.player_sprite, self.ammo_list)
         zombie_hit_list = arcade.check_for_collision_with_list(self.player_sprite, self.zombie_list)
@@ -124,6 +143,35 @@ class MyGame(arcade.Window):
         for zombie in zombie_hit_list:
             zombie.remove_from_sprite_lists()
             self.score -= 1
+
+        """if len(zombie_hit_list) <= 0:
+            arcade.set_background_color(arcade.color.BLACK)
+            arcade.draw_text("GAME OVER", 400, 400, arcade.color.RED, 25)"""
+
+
+
+
+    def on_key_press(self, key, modifiers):
+
+        if key == arcade.key.W:
+            self.player_sprite.change_y = MOVEMENT_SPEED
+
+        elif key == arcade.key.S:
+            self.player_sprite.change_y = -MOVEMENT_SPEED
+
+        elif key == arcade.key.A:
+            self.player_sprite.change_x = -MOVEMENT_SPEED
+
+        elif key == arcade.key.D:
+            self.player_sprite.change_x = MOVEMENT_SPEED
+
+    def on_key_release(self, key, modifiers):
+
+        if key == arcade.key.W or key == arcade.key.S:
+            self.player_sprite.change_y = 0
+
+        elif key == arcade.key.A or key == arcade.key.D:
+            self.player_sprite.change_x = 0
 
 
 def main():
