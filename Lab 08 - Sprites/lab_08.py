@@ -46,6 +46,12 @@ class Zombie(arcade.Sprite):
 
         self.circle_angle += self.circle_speed
 
+    """def freeze(self):
+        self.center_x = self.center_x
+        self.center_y = self.center_y
+        self.change_x = self.change_x
+        self.change_y = self.change_y"""
+
 
 class Player(arcade.Sprite):
     def update(self):
@@ -144,7 +150,8 @@ class MyGame(arcade.Window):
             zombie.remove_from_sprite_lists()
             self.score -= 1
 
-        """if len(zombie_hit_list) <= 0:
+        """if len(zombie_hit_list) == 0:
+            self.zombie.freeze()
             arcade.set_background_color(arcade.color.BLACK)
             arcade.draw_text("GAME OVER", 400, 400, arcade.color.RED, 25)"""
 
