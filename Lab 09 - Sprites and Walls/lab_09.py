@@ -1,7 +1,7 @@
 import arcade
 import random
 from pyglet.math import Vec2
-
+# ALL GRAPHICS AND SOUNDS WERE RETRIEVED FROM KENNLEY/ARCADE
 # Declaring constants
 SPRITE_SCALING = 0.5
 SPRITE_NATIVE_SIZE = 128
@@ -9,52 +9,75 @@ SPRITE_SIZE = int(SPRITE_NATIVE_SIZE * SPRITE_SCALING)
 
 DEFAULT_SCREEN_WIDTH = 800
 DEFAULT_SCREEN_HEIGHT = 800
+BORDER_WIDTH = 2048
+BORDER_HEIGHT = 1536
+MAP_WIDTH = 2016
+MAP_HEIGHT = 1568
 SCREEN_TITLE = "lab_09"
 VIEWPOINT_MARGIN = 20
 CAMERA_SPEED = 0.3
 
-MAP_WIDTH = 2016
-MAP_HEIGHT = 1568
-
-PLAYER_SPEED = 8.5
+PLAYER_SPEED = 7.5
 PLAYER_SCALE = 0.5
-BORDER_WIDTH = 2048
-BORDER_HEIGHT = 1536
+RIGHT_FACING = 0
+LEFT_FACING = 1
+
 AMMO_COUNT = 50
 AMMO_SCALE = 0.07
 
-TEXTURE_LEFT = 0
-TEXTURE_RIGHT = 1
-
-UPDATE_PER_FRAME = 5
+UPDATES_PER_FRAME = 4
 
 
 def load_texture_pair(filename):
     return [
-        arcade.load_texture(filename), arcade.load_texture(filename, flipped_horizontally=True)
+        arcade.load_texture(filename),
+        arcade.load_texture(filename, flipped_horizontally=True)
     ]
 
 
 class Player(arcade.Sprite):
     def __init__(self):
         super().__init__()
-        self.scale = SPRITE_SCALING
-        self.textures = []
 
-        texture = arcade.load_texture("character_maleAdventurer_idle.png")
-        self.textures.append(texture)
-        texture = arcade.load_texture("character_maleAdventurer_idle.png", flipped_horizontally=True)
-        self.textures.append(texture)
-        self.texture = texture
+        self.character_face_direction = RIGHT_FACING
 
-    def update(self):
-        self.center_x += self.change_x
-        self.center_y += self.change_y
+        # Used for flipping between image sequences
+        self.cur_texture = 0
 
-        if self.change_x < 0:
-            self.texture = self.textures[TEXTURE_LEFT]
-        elif self.change_x > 0:
-            self.texture = self.textures[TEXTURE_RIGHT]
+        self.scale = PLAYER_SCALE
+
+        # Adjust the collision box. Default includes too much empty space
+        self.points = [[-22, -64], [22, -64], [22, 28], [-22, 28]]
+
+        main_path = "character_maleAdventurer"
+
+        # Load textures for idle standing
+        self.idle_texture_pair = load_texture_pair(f"{main_path}_idle.png")
+
+        self.walk_textures = []
+        for i in range(8):
+            texture = load_texture_pair(f"{main_path}_walk{i}.png")
+            self.walk_textures.append(texture)
+
+    def update_animation(self, delta_time: float = 1 / 60):
+        # Figure out if we need to flip face left or right
+        if self.change_x < 0 and self.character_face_direction == RIGHT_FACING:
+            self.character_face_direction = LEFT_FACING
+        elif self.change_x > 0 and self.character_face_direction == LEFT_FACING:
+            self.character_face_direction = RIGHT_FACING
+
+        # Idle animation
+        if self.change_x == 0 and self.change_y == 0:
+            self.texture = self.idle_texture_pair[self.character_face_direction]
+            return
+
+        # Walking animation
+        self.cur_texture += 1
+        if self.cur_texture > 7 * UPDATES_PER_FRAME:
+            self.cur_texture = 0
+        frame = self.cur_texture // UPDATES_PER_FRAME
+        direction = self.character_face_direction
+        self.texture = self.walk_textures[frame][direction]
 
 
 class MyGame(arcade.Window):
@@ -82,7 +105,6 @@ class MyGame(arcade.Window):
 
     def setup(self):
         space_between_pixel = 64
-
         self.score = 0
         self.player_list = arcade.SpriteList()
         self.wall_list = arcade.SpriteList()
@@ -116,17 +138,25 @@ class MyGame(arcade.Window):
                 border.bottom = y
                 self.wall_list.append(border)
         #  Walls
+
         for x in range(160, MAP_WIDTH, space_between_pixel):
-            space_between_number = random.randrange(2)
+            """space_between_number = random.randrange(3)
             if space_between_number == 0:
                 space_between_pixel = 64
             elif space_between_number == 1:
                 space_between_pixel = 128
-            elif space_between_number == 2:
+            else:
                 space_between_pixel = 256
+                I spent about 2 1/2 hours created this system and I thought it worked perfectly,
+                 but I realized it changes nothing whether its there or not"""
+
             for y in range(160, MAP_HEIGHT, 128):
                 if random.randrange(32) > 0:
-                    wall = arcade.Sprite(":resources:images/tiles/stoneCenter.png", SPRITE_SCALING)
+                    #  Randomize which block to use
+                    if random.randrange(2) == 0:
+                        wall = arcade.Sprite(":resources:images/tiles/stoneCenter.png", SPRITE_SCALING)
+                    else:
+                        wall = arcade.Sprite(":resources:images/tiles/grassMid.png", SPRITE_SCALING)
                     wall.center_x = x
                     wall.center_y = y
                     self.wall_list.append(wall)
@@ -202,6 +232,7 @@ class MyGame(arcade.Window):
             self.player_sprite.change_x = PLAYER_SPEED
 
         self.player_list.update()
+        self.player_list.update_animation()
         self.physics_engine.update()
 
         self.scroll_to_player()
@@ -228,4 +259,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
