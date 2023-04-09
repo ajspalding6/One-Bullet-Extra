@@ -27,9 +27,6 @@ AMMO_SCALE = 0.07
 
 UPDATES_PER_FRAME = 4
 
-GRAVITY = .5
-JUMP_SPEED = 10
-
 
 def load_texture_pair(filename):
     return [
@@ -142,16 +139,27 @@ class MyGame(arcade.Window):
                 self.wall_list.append(border)
         #  Walls
 
-        map_name = "tester.tmj"
-        self.tile_map = arcade.load_tilemap(map_name, SPRITE_SCALING)
+        for x in range(160, MAP_WIDTH, space_between_pixel):
+            """space_between_number = random.randrange(3)
+            if space_between_number == 0:
+                space_between_pixel = 64
+            elif space_between_number == 1:
+                space_between_pixel = 128
+            else:
+                space_between_pixel = 256
+                I spent about 2 1/2 hours created this system and I thought it worked perfectly,
+                 but I realized it changes nothing whether its there or not"""
 
-        self.wall_list = self.tile_map.sprite_lists["Wall"]
-        #  self.ammo_list = self.tile_map.sprite_lists["Ammo"]
-
-        if self.tile_map.background_color:
-            arcade.set_background_color(self.tile_map.background_color)
-
-        self.physics_engine = arcade.PhysicsEnginePlatformer(self.player_sprite, self.wall_list, gravity_constant=GRAVITY)
+            for y in range(160, MAP_HEIGHT, 128):
+                if random.randrange(32) > 0:
+                    #  Randomize which block to use
+                    if random.randrange(2) == 0:
+                        wall = arcade.Sprite(":resources:images/tiles/stoneCenter.png", SPRITE_SCALING)
+                    else:
+                        wall = arcade.Sprite(":resources:images/tiles/grassMid.png", SPRITE_SCALING)
+                    wall.center_x = x
+                    wall.center_y = y
+                    self.wall_list.append(wall)
         #  Make sure ammo isn't on the walls
         for i in range(AMMO_COUNT):
             ammo = arcade.Sprite("ammo2", AMMO_SCALE)
