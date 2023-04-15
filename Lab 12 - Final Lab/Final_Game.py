@@ -1,0 +1,367 @@
+import arcade
+from pyglet.math import Vec2
+import CONSTANTS
+import math
+
+"""
+Controls: 
+A = left
+D = Right
+Space = Jump
+
+Purpose of the game:
+Spawn in with a gun. The player can pick up ammo. Zombies spawn randomly and pathfind to the player. 3 hits from a 
+zombie and game over. 2 bullets to kill a zombie.
+As the game progress the zombie spawning will increase and it will take more bullets to kill them and they will 
+walk faster.
+
+Right now, my biggest issue is with getting the zombie to pathfind and move. I'm also 
+trying to figure out how to loop the map. I want it so that you can just walk from one end to 
+the other and it will continue. I'm thinking about doing a player_sprite_center conditional statement and if it meets 
+the requirements then it will update the center of the player to the other side of the map but I don't want it to jump.
+I want it to appear as though the player hasn't moved and he's just continuing to walk forward. 
+I then need to get the zombie coded in
+
+Largest obstacle for me during this whole process is that the examples I'm pulling from all use different styles. One 
+will have their zombie in the MyGame class and the other one will have it in it's own separate class so I'm having 
+trouble figuring out how to implement and specific example into the code I've already reference/written
+
+
+Current issue: 
+(1)The zombie spawns at 0,0 below the map. If I set his spawn point using zombie.center_x or center_y,
+then no pathfind line is drawn and it  only "pathfinds" when I am on top of the zombie. It only pathfinds for about a 
+64 by 64 pixel radius around the zombie.
+The pathfind line is also only ever vertical and is draw at 0,0 upwards ina straight line no matter where I am. In order
+to see the line you have to walk left towards the edge of the map while jumping because the line only shows when the 
+player is jumping
+
+(2) The zombie also wont move even though I called the function (Zombie) to move the zombie. Biggest thing right now is
+that I'm trying to code things that I don't really know how they work
+
+(3) It only pathfinds when I jump
+"""
+
+
+def load_texture_pair(filename):
+    return [arcade.load_texture(filename), arcade.load_texture(filename, flipped_horizontally=True)]
+
+
+class Entity(arcade.Sprite):
+    def __init__(self):
+        super().__init__()
+
+        self.facing_direction = CONSTANTS.RIGHT_FACING
+
+        self.cur_texture = 0
+        self.scale = CONSTANTS.PLAYER_SCALE
+
+        main_path = f"character_maleAdventurer"
+
+        self.idle_texture_pair = load_texture_pair(f"{main_path}_idle.png")
+        self.jump_texture_pair = load_texture_pair(f"{main_path}_jump.png")
+        self.fall_texture_pair = load_texture_pair(f"{main_path}_fall.png")
+
+        self.walk_textures = []
+        for i in range(8):
+            texture = load_texture_pair(f"{main_path}_walk{i}.png")
+            self.walk_textures.append(texture)
+
+        self.climbing_textures = []
+        texture = arcade.load_texture(f"{main_path}_climb0.png")
+        self.climbing_textures.append(texture)
+        texture = arcade.load_texture(f"{main_path}_climb1.png")
+        self.climbing_textures.append(texture)
+
+        self.texture = self.idle_texture_pair[0]
+
+        self.set_hit_box(self.texture.hit_box_points)
+
+
+class Zombie(arcade.Sprite):
+    """
+    This class represents the Enemy on our screen.
+    """
+
+    def __init__(self, image, scale, position_list):
+        super().__init__(image, scale)
+        self.position_list = position_list
+        self.cur_position = 0
+        self.speed = CONSTANTS.ZOMBIE_SPEED
+
+    def update(self):
+        """ Have a sprite follow a path """
+        #  self.center_x = 2300
+        #  I tried setting the spawn point in the actual function and that doesn't work either.
+        #  self.center_y = 2400
+        # Where are we
+        start_x = self.center_x
+        start_y = self.center_y
+
+        # Where are we going
+        dest_x = self.position_list[self.cur_position][0]
+        dest_y = self.position_list[self.cur_position][1]
+
+        # X and Y diff between the two
+        x_diff = dest_x - start_x
+        y_diff = dest_y - start_y
+
+        # Calculate angle to get there
+        angle = math.atan2(y_diff, x_diff)
+
+        # How far are we?
+        distance = math.sqrt((self.center_x - dest_x) ** 2 + (self.center_y - dest_y) ** 2)
+
+        # How fast should we go? If we are close to our destination,
+        # lower our speed so we don't overshoot.
+        speed = min(self.speed, distance)
+
+        # Calculate vector to travel
+        change_x = math.cos(angle) * speed
+        change_y = math.sin(angle) * speed
+
+        # Update our location
+        self.center_x += change_x
+        self.center_y += change_y
+
+        # How far are we?
+        distance = math.sqrt((self.center_x - dest_x) ** 2 + (self.center_y - dest_y) ** 2)
+
+        # If we are there, head to the next point.
+        if distance <= self.speed:
+            self.cur_position += 1
+
+            # Reached the end of the list, start over.
+            if self.cur_position >= len(self.position_list):
+                self.cur_position = 0
+
+
+class Player(Entity):
+    def __init__(self):
+
+        super().__init__()
+
+        self.jumping = False
+        self.climbing = False
+        self.is_on_ladder = False
+
+    def update_animation(self, delta_time: float = 1 / 60):
+
+        if self.change_x < 0 and self.facing_direction == CONSTANTS.RIGHT_FACING:
+            self.facing_direction = CONSTANTS.LEFT_FACING
+        elif self.change_x > 0 and self.facing_direction == CONSTANTS.LEFT_FACING:
+            self.facing_direction = CONSTANTS.RIGHT_FACING
+
+        if self.is_on_ladder:
+            self.climbing = True
+        if not self.is_on_ladder and self.climbing:
+            self.climbing = False
+        if self.climbing and abs(self.change_y) > 1:
+            self.cur_texture += 1
+            if self.cur_texture > 7:
+                self.cur_texture = 0
+        if self.climbing:
+            self.texture = self.climbing_textures[self.cur_texture // 4]
+            return
+
+        if self.change_y > 0 and not self.is_on_ladder:
+            self.texture = self.jump_texture_pair[self.facing_direction]
+            return
+        elif self.change_y < 0 and not self.is_on_ladder:
+            self.texture = self.fall_texture_pair[self.facing_direction]
+            return
+
+        if self.change_x == 0:
+            self.texture = self.idle_texture_pair[self.facing_direction]
+            return
+
+        self.cur_texture += 1
+        if self.cur_texture > 7:
+            self.cur_texture = 0
+        self.texture = self.walk_textures[self.cur_texture][self.facing_direction]
+
+
+class MyGame(arcade.Window):
+    def __init__(self):
+        super().__init__(resizable=True)
+
+        self.player_list = True
+        self.wall_list = None
+        self.zombie_list = None
+
+        self.player_sprite = None
+        self.physics_engine = None
+        self.score = 0
+        self.path = None
+
+        self.barrier_list = None
+        self.view_bottom = 0
+        self.view_left = 0
+
+        self.background = None
+
+        # Space/jump
+        self.space_bar_pressed = False
+        # left
+        self.a_pressed = False
+        # down
+        self.s_pressed = False
+        # right
+        self.d_pressed = False
+
+        self.title_map = None
+
+        self.camera_sprites = arcade.Camera(CONSTANTS.DEFAULT_SCREEN_WIDTH, CONSTANTS.DEFAULT_SCREEN_HEIGHT)
+        self.camera_gui = arcade.Camera(CONSTANTS.DEFAULT_SCREEN_WIDTH, CONSTANTS.DEFAULT_SCREEN_HEIGHT)
+
+    def setup(self):
+        self.score = 0
+
+        self.player_list = arcade.SpriteList()
+
+        self.wall_list = arcade.SpriteList(use_spatial_hash=True, spatial_hash_cell_size=128)
+        self.zombie_list = arcade.SpriteList()
+
+        self.player_sprite = Player()
+        self.player_sprite.center_x = CONSTANTS.SPRITE_SIZE * 38
+        self.player_sprite.center_y = CONSTANTS.SPRITE_SIZE * 34
+        self.player_list.append(self.player_sprite)
+
+        self.background = arcade.load_texture("background.jpg")
+
+        map_name = "Map_final_game.tmj"
+        self.title_map = arcade.load_tilemap(map_name, CONSTANTS.TILE_SCALING)
+        self.wall_list = self.title_map.sprite_lists["Walls_and_blocks"]
+        zombie = Zombie("character_zombie_idle.png", CONSTANTS.PLAYER_SCALE, self.player_sprite.position)
+        #  If you uncomment these two lines you'll see what I'm talking about in issue (1). Run it with these lines and
+        #  then without these lines of code
+        #  zombie.center_x = self.player_sprite.position[0]
+        #  zombie.center_y = self.player_sprite.position[1]+190
+        self.zombie_list.append(zombie)
+
+        self.physics_engine = arcade.PhysicsEnginePlatformer(self.player_sprite,
+                                                             self.wall_list,
+                                                             gravity_constant=CONSTANTS.GRAVITY)
+
+        self.path = None
+        # Grid size for calculations. The smaller the grid, the longer the time
+        # for calculations. Make sure the grid aligns with the sprite wall grid,
+        # or some openings might be missed.
+        grid_size = CONSTANTS.SPRITE_SIZE
+
+        # Calculate the playing field size. We can't generate paths outside of
+        # this.
+        playing_field_left_boundary = -300
+        playing_field_right_boundary = 10000
+        playing_field_top_boundary = 2300
+        playing_field_bottom_boundary = 0
+
+        # This calculates a list of barriers. By calculating it here in the
+        # init, we are assuming this list does not change. In this example,
+        # our walls don't move, so that is ok. If we want moving barriers (such as
+        # moving platforms or enemies) we need to recalculate. This can be an
+        # time-intensive process depending on the playing field size and grid
+        # resolution.
+
+        # Note: If the enemy sprites are the same size, we only need to calculate
+        # one of these. We do NOT need a different one for each enemy. The sprite
+        # is just used for a size calculation.
+        self.barrier_list = arcade.AStarBarrierList(zombie,
+                                                    self.wall_list,
+                                                    grid_size,
+                                                    playing_field_left_boundary,
+                                                    playing_field_right_boundary,
+                                                    playing_field_bottom_boundary,
+                                                    playing_field_top_boundary)
+
+    def on_update(self, delta_time):
+        self.player_sprite.change_x = 0
+
+        if self.a_pressed and not self.d_pressed:
+            self.player_sprite.change_x = -CONSTANTS.PLAYER_SPEED
+        elif self.d_pressed and not self.a_pressed:
+            self.player_sprite.change_x = CONSTANTS.PLAYER_SPEED
+
+        self.player_list.update()
+        self.player_list.update_animation()
+
+        self.physics_engine.update()
+
+        zombie = self.zombie_list[0]
+        self.path = arcade.astar_calculate_path(zombie.position,
+                                                self.player_sprite.position,
+                                                self.barrier_list,
+                                                diagonal_movement=False)
+        Zombie.update
+        print(self.path, "->", self.player_sprite.position)
+
+
+        self.scroll_to_player()
+
+    def on_draw(self):
+
+        self.clear()
+        arcade.draw_lrwh_rectangle_textured(0, 0, CONSTANTS.DEFAULT_SCREEN_WIDTH,
+                                            CONSTANTS.DEFAULT_SCREEN_HEIGHT, self.background)
+        self.camera_sprites.use()
+        self.wall_list.draw()
+        self.zombie_list.draw()
+        self.player_list.draw()
+        self.camera_gui.use()
+
+        score = f"Score: {self.score}"
+
+        arcade.draw_text(score, 10, 20, arcade.color.WHITE, 14)
+        arcade.draw_rectangle_filled(self.width // 2,
+                                     20,
+                                     self.width,
+                                     40,
+                                     arcade.color.ALMOND)
+        text = f"Scroll value: ({self.camera_sprites.position[0]:5.1f}, " \
+               f"{self.camera_sprites.position[1]:5.1f})"
+        arcade.draw_text(text, 10, 10, arcade.color.BLACK_BEAN, 20)
+        if self.path:
+            arcade.draw_line_strip(self.path, arcade.color.BLUE, 10)
+
+    def on_key_press(self, key, modifiers):
+        if key == arcade.key.A:
+            self.a_pressed = True
+        elif key == arcade.key.S:
+            self.s_pressed = True
+        elif key == arcade.key.D:
+            self.d_pressed = True
+        elif key == arcade.key.SPACE:
+            if self.physics_engine.can_jump():
+                self.player_sprite.change_y = CONSTANTS.JUMP_SPEED
+        
+    def on_key_release(self, key, modifiers):
+        if key == arcade.key.A:
+            self.a_pressed = False
+        elif key == arcade.key.S:
+            self.s_pressed = False
+        elif key == arcade.key.D:
+            self.d_pressed = False
+        elif key == arcade.key.SPACE:
+            self.space_bar_pressed = False
+
+    def scroll_to_player(self):
+
+        position = Vec2(self.player_sprite.center_x - self.width / 2,
+
+                        self.player_sprite.center_y - self.height / 3)
+
+        self.camera_sprites.move_to(position, CONSTANTS.CAMERA_SPEED)
+
+    def on_resize(self, width, height):
+        self.camera_sprites.resize(int(width), int(height))
+
+        self.camera_gui.resize(int(width), int(height))
+
+
+def main():
+    window = MyGame()
+    window.setup()
+    arcade.run()
+
+
+if __name__ == "__main__":
+    main()

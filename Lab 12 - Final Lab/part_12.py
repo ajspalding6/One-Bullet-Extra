@@ -67,12 +67,12 @@ class MyGame(arcade.Window):
         # --- Load our map
 
         # Read in the tiled map
-        map_name = "level1.json"
+        map_name = "Map_final_game.json"
         self.tile_map = arcade.load_tilemap(map_name, scaling=TILE_SCALING)
 
         # Set wall and coin SpriteLists
         # Any other layers here. Array index must be a layer.
-        self.wall_list = self.tile_map.sprite_lists["Walls"]
+        self.wall_list = self.tile_map.sprite_lists["Walls and blocks"]
         # self.coin_list = self.tile_map.sprite_lists["Coins"]
 
         # --- Other stuff
