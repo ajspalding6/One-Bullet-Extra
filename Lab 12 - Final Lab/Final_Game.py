@@ -1,3 +1,5 @@
+import random
+
 import arcade
 from pyglet.math import Vec2
 import CONSTANTS
@@ -78,9 +80,6 @@ class Entity(arcade.Sprite):
 
 
 class Zombie(arcade.Sprite):
-    """
-    This class represents the Enemy on our screen.
-    """
 
     def __init__(self, image, scale, position_list):
         super().__init__(image, scale)
@@ -98,9 +97,8 @@ class Zombie(arcade.Sprite):
         start_y = self.center_y
 
         # Where are we going
-        dest_x = self.position_list[self.cur_position][0]
-        dest_y = self.position_list[self.cur_position][1]
-
+        dest_x = self.position_list[0]
+        dest_y = self.position_list[1]
         # X and Y diff between the two
         x_diff = dest_x - start_x
         y_diff = dest_y - start_y
@@ -122,6 +120,7 @@ class Zombie(arcade.Sprite):
         # Update our location
         self.center_x += change_x
         self.center_y += change_y
+        #print(self.center_x, self.center_y)
 
         # How far are we?
         distance = math.sqrt((self.center_x - dest_x) ** 2 + (self.center_y - dest_y) ** 2)
@@ -187,17 +186,25 @@ class MyGame(arcade.Window):
         self.player_list = True
         self.wall_list = None
         self.zombie_list = None
+        self.bullet_list = None
+        self.gun_shot = arcade.load_sound("gun_shot.mp3")
+        self.ammo_pickup_sound = arcade.load_sound("confirmation_004.ogg")
+        self.direction = True
+        self.ammo_hit_list = None
+        self.wall_hit_list = None
+        self.player_hit_list = None
+        self.position_list = None
 
         self.player_sprite = None
+        self.zombie_sprite = None
         self.physics_engine = None
         self.score = 0
         self.path = None
-
+        self.ammo_full = True
+        self.mag_amount = 0
         self.barrier_list = None
         self.view_bottom = 0
         self.view_left = 0
-
-        self.background = None
 
         # Space/jump
         self.space_bar_pressed = False
@@ -207,36 +214,44 @@ class MyGame(arcade.Window):
         self.s_pressed = False
         # right
         self.d_pressed = False
-
+        self.e_pressed = False
+        self.left_click_pressed = False
+        self.background = None
         self.title_map = None
-
+        self.ammo_list = None
+        self.ammo = None
         self.camera_sprites = arcade.Camera(CONSTANTS.DEFAULT_SCREEN_WIDTH, CONSTANTS.DEFAULT_SCREEN_HEIGHT)
         self.camera_gui = arcade.Camera(CONSTANTS.DEFAULT_SCREEN_WIDTH, CONSTANTS.DEFAULT_SCREEN_HEIGHT)
 
     def setup(self):
         self.score = 0
-
+        self.mag_amount = 15
         self.player_list = arcade.SpriteList()
-
         self.wall_list = arcade.SpriteList(use_spatial_hash=True, spatial_hash_cell_size=128)
         self.zombie_list = arcade.SpriteList()
+        self.bullet_list = arcade.SpriteList()
+        self.ammo_list = arcade.SpriteList()
+        ammo = arcade.Sprite("bro.png", CONSTANTS.AMMO_SCALE)
 
         self.player_sprite = Player()
-        self.player_sprite.center_x = CONSTANTS.SPRITE_SIZE * 38
+        self.player_sprite.center_x = CONSTANTS.SPRITE_SIZE * 20
         self.player_sprite.center_y = CONSTANTS.SPRITE_SIZE * 34
         self.player_list.append(self.player_sprite)
+        self.position_list = [self.player_sprite.position[0], self.player_sprite.position[1]]
+        self.zombie_sprite = Zombie("character_zombie_idle.png", CONSTANTS.SPRITE_SCALING, self.position_list)
+
+        self.zombie_sprite.center_x = random.randrange(CONSTANTS.START_X, CONSTANTS.END_X)
+        self.zombie_sprite.center_y = 1450
+        self.zombie_list.append(self.zombie_sprite)
 
         self.background = arcade.load_texture("background.jpg")
-
         map_name = "Map_final_game.tmj"
         self.title_map = arcade.load_tilemap(map_name, CONSTANTS.TILE_SCALING)
         self.wall_list = self.title_map.sprite_lists["Walls_and_blocks"]
-        zombie = Zombie("character_zombie_idle.png", CONSTANTS.PLAYER_SCALE, self.player_sprite.position)
+
+        print(self.player_sprite.position)
         #  If you uncomment these two lines you'll see what I'm talking about in issue (1). Run it with these lines and
         #  then without these lines of code
-        #  zombie.center_x = self.player_sprite.position[0]
-        #  zombie.center_y = self.player_sprite.position[1]+190
-        self.zombie_list.append(zombie)
 
         self.physics_engine = arcade.PhysicsEnginePlatformer(self.player_sprite,
                                                              self.wall_list,
@@ -247,12 +262,13 @@ class MyGame(arcade.Window):
         # for calculations. Make sure the grid aligns with the sprite wall grid,
         # or some openings might be missed.
         grid_size = CONSTANTS.SPRITE_SIZE
+        self.ammo_full = True
 
         # Calculate the playing field size. We can't generate paths outside of
         # this.
         playing_field_left_boundary = -300
         playing_field_right_boundary = 10000
-        playing_field_top_boundary = 2300
+        playing_field_top_boundary = 3500
         playing_field_bottom_boundary = 0
 
         # This calculates a list of barriers. By calculating it here in the
@@ -265,13 +281,57 @@ class MyGame(arcade.Window):
         # Note: If the enemy sprites are the same size, we only need to calculate
         # one of these. We do NOT need a different one for each enemy. The sprite
         # is just used for a size calculation.
-        self.barrier_list = arcade.AStarBarrierList(zombie,
+        self.barrier_list = arcade.AStarBarrierList(self.zombie_sprite,
                                                     self.wall_list,
                                                     grid_size,
                                                     playing_field_left_boundary,
                                                     playing_field_right_boundary,
                                                     playing_field_bottom_boundary,
                                                     playing_field_top_boundary)
+
+        for i in range(CONSTANTS.AMMO_COUNT):
+            ammo_placed_successfully = False
+            ammo.center_x = random.randrange(CONSTANTS.START_X, CONSTANTS.END_X)
+            ammo.center_y = 1450
+            while not ammo_placed_successfully:
+
+                self.ammo_hit_list = arcade.check_for_collision_with_list(ammo, self.ammo_list)
+                self.wall_hit_list = arcade.check_for_collision_with_list(ammo, self.wall_list)
+                self.player_hit_list = arcade.check_for_collision_with_list(ammo, self.player_list)
+
+                if len(self.ammo_hit_list) != 0:
+                    ammo.center_x += 64
+                if len(self.wall_hit_list) != 0:
+                    ammo.center_y += 64
+                    print(f"Moved upwards to {ammo.center_y}")
+
+                if len(self.ammo_hit_list) == 0 and len(self.wall_hit_list) == 0:
+                    print(f"Bullet {i} placed at({ammo.center_x},{ammo.center_y})")
+
+                    ammo_placed_successfully = True
+
+            for i in range(CONSTANTS.AMMO_COUNT):
+                ammo_placed_successfully = False
+                ammo.center_x = random.randrange(CONSTANTS.START_X, CONSTANTS.END_X)
+                ammo.center_y = 1450
+                while not ammo_placed_successfully:
+
+                    self.ammo_hit_list = arcade.check_for_collision_with_list(ammo, self.ammo_list)
+                    self.wall_hit_list = arcade.check_for_collision_with_list(ammo, self.wall_list)
+                    self.player_hit_list = arcade.check_for_collision_with_list(ammo, self.player_list)
+
+                    if len(self.ammo_hit_list) != 0:
+                        ammo.center_x += 64
+                    if len(self.wall_hit_list) != 0:
+                        ammo.center_y += 64
+                        print(f"Moved upwards to {ammo.center_y}")
+
+                    if len(self.ammo_hit_list) == 0 and len(self.wall_hit_list) == 0:
+                        print(f"Bullet {i} placed at({ammo.center_x},{ammo.center_y})")
+
+                        ammo_placed_successfully = True
+            self.ammo_list.append(ammo)
+
 
     def on_update(self, delta_time):
         self.player_sprite.change_x = 0
@@ -283,17 +343,37 @@ class MyGame(arcade.Window):
 
         self.player_list.update()
         self.player_list.update_animation()
+        self.ammo_list.update()
+        self.bullet_list.update()
 
         self.physics_engine.update()
 
-        zombie = self.zombie_list[0]
-        self.path = arcade.astar_calculate_path(zombie.position,
+        self.path = arcade.astar_calculate_path(self.zombie_sprite.position,
                                                 self.player_sprite.position,
                                                 self.barrier_list,
                                                 diagonal_movement=False)
-        Zombie.update
-        print(self.path, "->", self.player_sprite.position)
+        self.position_list = [self.player_sprite.position[0], self.player_sprite.position[1]]
+        self.zombie_list.update()
+        #zombie.update()
+        #print(self.path, "->", self.player_sprite.position)
+        for bullet in self.bullet_list:
+            hit_list = arcade.check_for_collision_with_list(bullet, self.zombie_list)
+            hit_list2 = arcade.check_for_collision_with_list(bullet, self.wall_list)
 
+            if len(hit_list) > 0:
+                bullet.remove_from_sprite_lists()
+            if len(hit_list2) > 0:
+                bullet.remove_from_sprite_lists()
+
+        for ammo in self.ammo_list:
+            ammo_player_hit_list = arcade.check_for_collision_with_list(ammo, self.player_list)
+            if len(ammo_player_hit_list) != 0 and self.e_pressed:
+
+                ammo.remove_from_sprite_lists()
+                arcade.play_sound(self.ammo_pickup_sound)
+                self.mag_amount = 15
+                self.ammo_full = True
+                #arcade.play_sound(self.reload_sound)
 
         self.scroll_to_player()
 
@@ -302,10 +382,13 @@ class MyGame(arcade.Window):
         self.clear()
         arcade.draw_lrwh_rectangle_textured(0, 0, CONSTANTS.DEFAULT_SCREEN_WIDTH,
                                             CONSTANTS.DEFAULT_SCREEN_HEIGHT, self.background)
+
         self.camera_sprites.use()
         self.wall_list.draw()
         self.zombie_list.draw()
         self.player_list.draw()
+        self.bullet_list.draw()
+        self.ammo_list.draw()
         self.camera_gui.use()
 
         score = f"Score: {self.score}"
@@ -319,42 +402,85 @@ class MyGame(arcade.Window):
         text = f"Scroll value: ({self.camera_sprites.position[0]:5.1f}, " \
                f"{self.camera_sprites.position[1]:5.1f})"
         arcade.draw_text(text, 10, 10, arcade.color.BLACK_BEAN, 20)
-        if self.path:
-            arcade.draw_line_strip(self.path, arcade.color.BLUE, 10)
+
+        reload = f"YOU NEED TO RELOAD"
+
+        if self.mag_amount < 1:
+            self.ammo_full = False
+            arcade.draw_text(reload, CONSTANTS.DEFAULT_SCREEN_WIDTH // 3.5, CONSTANTS.DEFAULT_SCREEN_HEIGHT // 2,
+                             CONSTANTS.RELOAD_COLOR, 24)
+
+        ammo_display = f"Bullets: {self.mag_amount}/15"
+        arcade.draw_text(ammo_display, 0, CONSTANTS.DEFAULT_SCREEN_HEIGHT // 2, CONSTANTS.AMMO_COUNT_COLOR, 24)
+        #if self.path:
+            #arcade.draw_line_strip(self.path, arcade.color.BLUE, 10)
 
     def on_key_press(self, key, modifiers):
+        #self.one = arcade.load_sound("footstep_grass_000.ogg")
+        #self.three = arcade.load_sound("footstep_grass_002.ogg")
+
         if key == arcade.key.A:
             self.a_pressed = True
-        elif key == arcade.key.S:
-            self.s_pressed = True
+            self.direction = False
+            #while self.a_pressed:
+             #   arcade.play_sound(self.one)
+              #  time.sleep(0.5)
         elif key == arcade.key.D:
             self.d_pressed = True
+            self.direction = True
+            #while self.d_pressed:
+             #   arcade.play_sound(self.three)
+              #  time.sleep(0.5)
         elif key == arcade.key.SPACE:
             if self.physics_engine.can_jump():
                 self.player_sprite.change_y = CONSTANTS.JUMP_SPEED
-        
+        elif key == arcade.key.E:
+            self.e_pressed = True
+
     def on_key_release(self, key, modifiers):
         if key == arcade.key.A:
             self.a_pressed = False
-        elif key == arcade.key.S:
-            self.s_pressed = False
         elif key == arcade.key.D:
             self.d_pressed = False
         elif key == arcade.key.SPACE:
             self.space_bar_pressed = False
+        elif key == arcade.key.E:
+            self.e_pressed = False
 
     def scroll_to_player(self):
 
-        position = Vec2(self.player_sprite.center_x - self.width / 2,
+        camera_position = Vec2(self.player_sprite.center_x - self.width / 2,
+                               self.player_sprite.center_y - self.height / 3)
 
-                        self.player_sprite.center_y - self.height / 3)
-
-        self.camera_sprites.move_to(position, CONSTANTS.CAMERA_SPEED)
+        self.camera_sprites.move_to(camera_position, CONSTANTS.CAMERA_SPEED)
 
     def on_resize(self, width, height):
         self.camera_sprites.resize(int(width), int(height))
 
         self.camera_gui.resize(int(width), int(height))
+        CONSTANTS.DEFAULT_SCREEN_WIDTH = width
+        CONSTANTS.DEFAULT_SCREEN_HEIGHT = height
+
+        return CONSTANTS.DEFAULT_SCREEN_HEIGHT, CONSTANTS.DEFAULT_SCREEN_WIDTH
+
+    def on_mouse_press(self, x: int, y: int, button: int, modifiers: int):
+        if self.ammo_full:
+            arcade.play_sound(self.gun_shot)
+            bullet = arcade.Sprite("Bullet.png", .04)
+            bullet.angle = 90
+            self.mag_amount -= 1
+
+            if self.direction:
+                bullet.center_x = self.player_sprite.center_x - 8
+                bullet.center_y = self.player_sprite.center_y - 12
+                bullet.change_x = CONSTANTS.BULLET_SPEED
+                bullet.angle = 270
+            else:
+                bullet.center_x = self.player_sprite.center_x - 8
+                bullet.center_y = self.player_sprite.center_y - 12
+                bullet.change_x = -CONSTANTS.BULLET_SPEED
+
+            self.bullet_list.append(bullet)
 
 
 def main():
