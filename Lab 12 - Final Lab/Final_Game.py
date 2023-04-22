@@ -82,6 +82,7 @@ class Entity(arcade.Sprite):
 class Zombie(arcade.Sprite):
 
     def __init__(self, image, scale, position_list):
+
         super().__init__(image, scale)
         self.position_list = position_list
         self.cur_position = 0
@@ -114,12 +115,12 @@ class Zombie(arcade.Sprite):
         speed = min(self.speed, distance)
 
         # Calculate vector to travel
-        change_x = math.cos(angle) * speed
-        change_y = math.sin(angle) * speed
+        self.change_x = math.cos(angle) * speed
+        self.change_y = math.sin(angle) * speed
 
         # Update our location
-        self.center_x += change_x
-        self.center_y += change_y
+        self.center_x += self.change_x
+        self.center_y += self.change_y
         #print(self.center_x, self.center_y)
 
         # How far are we?
@@ -205,7 +206,7 @@ class MyGame(arcade.Window):
         self.barrier_list = None
         self.view_bottom = 0
         self.view_left = 0
-
+        self.grid_size = None
         # Space/jump
         self.space_bar_pressed = False
         # left
@@ -231,25 +232,17 @@ class MyGame(arcade.Window):
         self.zombie_list = arcade.SpriteList()
         self.bullet_list = arcade.SpriteList()
         self.ammo_list = arcade.SpriteList()
-        ammo = arcade.Sprite("bro.png", CONSTANTS.AMMO_SCALE)
 
         self.player_sprite = Player()
         self.player_sprite.center_x = CONSTANTS.SPRITE_SIZE * 20
         self.player_sprite.center_y = CONSTANTS.SPRITE_SIZE * 34
         self.player_list.append(self.player_sprite)
-        self.position_list = [self.player_sprite.position[0], self.player_sprite.position[1]]
-        self.zombie_sprite = Zombie("character_zombie_idle.png", CONSTANTS.SPRITE_SCALING, self.position_list)
-
-        self.zombie_sprite.center_x = random.randrange(CONSTANTS.START_X, CONSTANTS.END_X)
-        self.zombie_sprite.center_y = 1450
-        self.zombie_list.append(self.zombie_sprite)
 
         self.background = arcade.load_texture("background.jpg")
         map_name = "Map_final_game.tmj"
         self.title_map = arcade.load_tilemap(map_name, CONSTANTS.TILE_SCALING)
         self.wall_list = self.title_map.sprite_lists["Walls_and_blocks"]
 
-        print(self.player_sprite.position)
         #  If you uncomment these two lines you'll see what I'm talking about in issue (1). Run it with these lines and
         #  then without these lines of code
 
@@ -257,39 +250,11 @@ class MyGame(arcade.Window):
                                                              self.wall_list,
                                                              gravity_constant=CONSTANTS.GRAVITY)
 
-        self.path = None
-        # Grid size for calculations. The smaller the grid, the longer the time
-        # for calculations. Make sure the grid aligns with the sprite wall grid,
-        # or some openings might be missed.
-        grid_size = CONSTANTS.SPRITE_SIZE
-        self.ammo_full = True
-
-        # Calculate the playing field size. We can't generate paths outside of
-        # this.
-        playing_field_left_boundary = -300
-        playing_field_right_boundary = 10000
-        playing_field_top_boundary = 3500
-        playing_field_bottom_boundary = 0
-
-        # This calculates a list of barriers. By calculating it here in the
-        # init, we are assuming this list does not change. In this example,
-        # our walls don't move, so that is ok. If we want moving barriers (such as
-        # moving platforms or enemies) we need to recalculate. This can be an
-        # time-intensive process depending on the playing field size and grid
-        # resolution.
-
-        # Note: If the enemy sprites are the same size, we only need to calculate
-        # one of these. We do NOT need a different one for each enemy. The sprite
-        # is just used for a size calculation.
-        self.barrier_list = arcade.AStarBarrierList(self.zombie_sprite,
-                                                    self.wall_list,
-                                                    grid_size,
-                                                    playing_field_left_boundary,
-                                                    playing_field_right_boundary,
-                                                    playing_field_bottom_boundary,
-                                                    playing_field_top_boundary)
+        self.grid_size = CONSTANTS.SPRITE_SIZE
 
         for i in range(CONSTANTS.AMMO_COUNT):
+            ammo = arcade.Sprite("bro.png", CONSTANTS.AMMO_SCALE)
+
             ammo_placed_successfully = False
             ammo.center_x = random.randrange(CONSTANTS.START_X, CONSTANTS.END_X)
             ammo.center_y = 1450
@@ -306,32 +271,41 @@ class MyGame(arcade.Window):
                     print(f"Moved upwards to {ammo.center_y}")
 
                 if len(self.ammo_hit_list) == 0 and len(self.wall_hit_list) == 0:
+                    if ammo.center_x > CONSTANTS.END_X or ammo.center_x < 0:
+                        ammo.remove_from_sprite_lists()
                     print(f"Bullet {i} placed at({ammo.center_x},{ammo.center_y})")
 
                     ammo_placed_successfully = True
 
-            for i in range(CONSTANTS.AMMO_COUNT):
-                ammo_placed_successfully = False
-                ammo.center_x = random.randrange(CONSTANTS.START_X, CONSTANTS.END_X)
-                ammo.center_y = 1450
-                while not ammo_placed_successfully:
-
-                    self.ammo_hit_list = arcade.check_for_collision_with_list(ammo, self.ammo_list)
-                    self.wall_hit_list = arcade.check_for_collision_with_list(ammo, self.wall_list)
-                    self.player_hit_list = arcade.check_for_collision_with_list(ammo, self.player_list)
-
-                    if len(self.ammo_hit_list) != 0:
-                        ammo.center_x += 64
-                    if len(self.wall_hit_list) != 0:
-                        ammo.center_y += 64
-                        print(f"Moved upwards to {ammo.center_y}")
-
-                    if len(self.ammo_hit_list) == 0 and len(self.wall_hit_list) == 0:
-                        print(f"Bullet {i} placed at({ammo.center_x},{ammo.center_y})")
-
-                        ammo_placed_successfully = True
             self.ammo_list.append(ammo)
 
+        self.path = [self.player_sprite.center_x, self.player_sprite.center_y]
+        self.position_list = self.path
+        self.zombie_sprite = Zombie("character_zombie_idle.png", CONSTANTS.SPRITE_SCALING, self.position_list)
+        self.zombie_sprite.center_x = random.randrange(CONSTANTS.START_X, CONSTANTS.END_X)
+        self.zombie_sprite.center_y = 1450
+        """for i in range(CONSTANTS.ZOMBIE_COUNT):
+            self.position_list = self.path
+            self.zombie_sprite = Zombie("character_zombie_idle.png", CONSTANTS.SPRITE_SCALING, self.position_list)
+            self.zombie_sprite.center_x = random.randrange(CONSTANTS.START_X, CONSTANTS.END_X)
+            self.zombie_sprite.center_y = 1450
+            zombie_placed_successfully = False
+            while not zombie_placed_successfully:
+
+                zombie_ammo_hit_list = arcade.check_for_collision_with_list(self.zombie_sprite, self.ammo_list)
+                zombie_wall_hit_list = arcade.check_for_collision_with_list(self.zombie_sprite, self.wall_list)
+                # zombie_player_hit_list = arcade.check_for_collision_with_list(self.zombie_sprite, self.player_list)
+
+                if len(zombie_ammo_hit_list) != 0:
+                    self.zombie_sprite.center_x += 64
+                if len(zombie_wall_hit_list) != 0:
+                    self.zombie_sprite.center_y += 64"""
+
+            #zombie_placed_successfully = True
+
+        self.zombie_list.append(self.zombie_sprite)
+
+        self.ammo_full = True
 
     def on_update(self, delta_time):
         self.player_sprite.change_x = 0
@@ -348,21 +322,34 @@ class MyGame(arcade.Window):
 
         self.physics_engine.update()
 
-        self.path = arcade.astar_calculate_path(self.zombie_sprite.position,
-                                                self.player_sprite.position,
-                                                self.barrier_list,
-                                                diagonal_movement=False)
-        self.position_list = [self.player_sprite.position[0], self.player_sprite.position[1]]
-        self.zombie_list.update()
-        #zombie.update()
+        playing_field_left_boundary = -CONSTANTS.SPRITE_SIZE * 2
+        playing_field_right_boundary = CONSTANTS.SPRITE_SIZE * 35
+        playing_field_top_boundary = CONSTANTS.SPRITE_SIZE * 17
+        playing_field_bottom_boundary = -CONSTANTS.SPRITE_SIZE * 2
+
+        self.barrier_list = arcade.AStarBarrierList(self.zombie_sprite,
+                                                    self.wall_list,
+                                                    self.grid_size,
+                                                    playing_field_left_boundary,
+                                                    playing_field_right_boundary,
+                                                    playing_field_bottom_boundary,
+                                                    playing_field_top_boundary)
+
+
         #print(self.path, "->", self.player_sprite.position)
         for bullet in self.bullet_list:
+            hit = 0
             hit_list = arcade.check_for_collision_with_list(bullet, self.zombie_list)
             hit_list2 = arcade.check_for_collision_with_list(bullet, self.wall_list)
-
             if len(hit_list) > 0:
                 bullet.remove_from_sprite_lists()
+
             if len(hit_list2) > 0:
+                bullet.remove_from_sprite_lists()
+
+            if bullet.right > self.player_sprite.center_x + 750:
+                bullet.remove_from_sprite_lists()
+            if bullet.left < self.player_sprite.center_x - 750:
                 bullet.remove_from_sprite_lists()
 
         for ammo in self.ammo_list:
@@ -373,7 +360,23 @@ class MyGame(arcade.Window):
                 arcade.play_sound(self.ammo_pickup_sound)
                 self.mag_amount = 15
                 self.ammo_full = True
-                #arcade.play_sound(self.reload_sound)
+                #  arcade.play_sound(self.reload_sound)
+
+        """for zombie in self.zombie_list:
+            zombie_bullet_hit_list = arcade.check_for_collision_with_list(zombie, self.bullet_list)
+            if len(zombie_bullet_hit_list) != 0 and hit > 1:
+                zombie.r"""
+
+        zombie = self.zombie_list[0]
+        # Set to True if we can move diagonally. Note that diagonal movement
+        # might cause the enemy to clip corners.
+        self.path = arcade.astar_calculate_path(zombie.position,
+                                                self.player_sprite.position,
+                                                self.barrier_list,
+                                                diagonal_movement=False)
+
+
+        self.zombie_list.update()
 
         self.scroll_to_player()
 
