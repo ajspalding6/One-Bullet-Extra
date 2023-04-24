@@ -84,43 +84,45 @@ class MyGame(arcade.Window):
 
         # Make sure we are on-grid. It is possible to click in the upper right
         # corner in the margin and go to a grid location that doesn't exist
+
         i1 = 0
         i2 = 0
         i3 = 0
         i4 = 0
-        if row < ROW_COUNT and column < COLUMN_COUNT:
 
+        if row < ROW_COUNT and column < COLUMN_COUNT:
             # Flip the location between 1 and 0.
             if self.grid[row][column] == 0:
-
-                if (row + 1) < ROW_COUNT:
-                    i1 = 1
-                if (row - 1) > 0:
-                    i2 = 1
-                if (column + 1) < COLUMN_COUNT:
-                    i3 = 1
-                if (column - 1) > 0:
-                    i4 = 1
                 self.grid[row][column] = 1
-                self.grid[row + i1][column] = 1
-                self.grid[row - i2][column] = 1
-                self.grid[row][column + i3] = 1
-                self.grid[row][column - i4] = 1
-
-            elif self.grid[row][column] != 0:
                 if (row + 1) < ROW_COUNT:
                     i1 = 1
-                if (row - 1) > 0:
+                if (row - 1) > -1:
                     i2 = 1
                 if (column + 1) < COLUMN_COUNT:
                     i3 = 1
-                if (column - 1) > 0:
+                if (column - 1) > -1:
                     i4 = 1
+
+                self.grid[row + i1][column] = self.grid[row][column]
+                self.grid[row - i2][column] = self.grid[row][column]
+                self.grid[row][column + i3] = self.grid[row][column]
+                self.grid[row][column - i4] = self.grid[row][column]
+
+            else:
                 self.grid[row][column] = 0
-                self.grid[row+i1][column] = 0
-                self.grid[row-i2][column] = 0
-                self.grid[row][column+i3] = 0
-                self.grid[row][column-i4] = 0
+                if (row + 1) < ROW_COUNT:
+                    i1 = 1
+                if (row - 1) > -1:
+                    i2 = 1
+                if (column + 1) < COLUMN_COUNT:
+                    i3 = 1
+                if (column - 1) > -1:
+                    i4 = 1
+
+                self.grid[row+i1][column] = self.grid[row][column]
+                self.grid[row-i2][column] = self.grid[row][column]
+                self.grid[row][column+i3] = self.grid[row][column]
+                self.grid[row][column-i4] = self.grid[row][column]
 
 
 def main():
