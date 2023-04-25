@@ -76,6 +76,7 @@ class Zombie(arcade.Sprite):
         self.position_list = position_list
         self.cur_position = 0
         self.speed = CONSTANTS.ZOMBIE_SPEED
+        self.hit_count = 3
 
     def update(self):
 
@@ -193,6 +194,11 @@ class MyGame(arcade.Window):
         self.view_left = 0
         self.grid_size = None
 
+        #  Food related
+        self.food_list = None
+        self.food_sprite = None
+        self.food_sound = None
+
         self.physics_engine = None
         self.score = 0
 
@@ -229,12 +235,14 @@ class MyGame(arcade.Window):
         self.wall_list = self.title_map.sprite_lists["Walls_and_blocks"]
 
         self.zombie_list = arcade.SpriteList()
-        self.path = [self.player_sprite.center_x, self.player_sprite.center_y]
-        self.position_list = self.path
-        self.zombie_sprite = Zombie("character_zombie_idle.png", CONSTANTS.SPRITE_SCALING, self.position_list)
-        self.zombie_sprite.center_x = 2200
-        self.zombie_sprite.center_y = 1450
-        self.zombie_list.append(self.zombie_sprite)
+        for i in range(CONSTANTS.ZOMBIE_COUNT):
+            self.path = [self.player_sprite.center_x, self.player_sprite.center_y + 100]
+            self.position_list = self.path
+            self.zombie_sprite = Zombie("character_zombie_idle.png", CONSTANTS.SPRITE_SCALING, self.position_list)
+            self.zombie_sprite.center_x = -850
+            self.zombie_sprite.center_y = 1450
+            self.zombie_list.append(self.zombie_sprite)
+            print(len(self.zombie_list))
 
         self.physics_engine = arcade.PhysicsEnginePlatformer(self.player_sprite,
                                                              self.wall_list,
@@ -259,19 +267,6 @@ class MyGame(arcade.Window):
                     ammo_placed_successfully = True
             self.ammo_list.append(ammo)
 
-    def on_update(self, delta_time):
-        self.player_sprite.change_x = 0
-        if self.a_pressed and not self.d_pressed:
-            self.player_sprite.change_x = -CONSTANTS.PLAYER_SPEED
-        elif self.d_pressed and not self.a_pressed:
-            self.player_sprite.change_x = CONSTANTS.PLAYER_SPEED
-
-        self.player_list.update()
-        self.player_list.update_animation()
-        self.ammo_list.update()
-        self.bullet_list.update()
-        self.physics_engine.update()
-
         playing_field_left_boundary = -CONSTANTS.SPRITE_SIZE * 2
         playing_field_right_boundary = CONSTANTS.SPRITE_SIZE * 35
         playing_field_top_boundary = CONSTANTS.SPRITE_SIZE * 17
@@ -285,12 +280,35 @@ class MyGame(arcade.Window):
                                                     playing_field_bottom_boundary,
                                                     playing_field_top_boundary)
 
+    def on_update(self, delta_time):
+        self.player_sprite.change_x = 0
+        if self.a_pressed and not self.d_pressed:
+            self.player_sprite.change_x = -CONSTANTS.PLAYER_SPEED
+        elif self.d_pressed and not self.a_pressed:
+            self.player_sprite.change_x = CONSTANTS.PLAYER_SPEED
+
+        self.player_list.update()
+        self.player_list.update_animation()
+        self.ammo_list.update()
+        self.bullet_list.update()
+        self.physics_engine.update()
+        self.zombie_list.update()
+
         for bullet in self.bullet_list:
             hit_list = arcade.check_for_collision_with_list(bullet, self.zombie_list)
             hit_list2 = arcade.check_for_collision_with_list(bullet, self.wall_list)
-            if len(hit_list) > 0 or len(hit_list2) > 0:
+            if len(hit_list) > 0:
+                for zombie in hit_list:
+                    zombie.hit_count -= 1
+                    if zombie.hit_count == 0:
+                        zombie.remove_from_sprite_lists()
+                    self.score += 10
                 bullet.remove_from_sprite_lists()
-            if bullet.right > self.player_sprite.center_x + 750 or \
+
+            elif len(hit_list2) > 0:
+                bullet.remove_from_sprite_lists()
+
+            elif bullet.right > self.player_sprite.center_x + 750 or \
                     bullet.left < self.player_sprite.center_x - 750:
                 bullet.remove_from_sprite_lists()
 
@@ -303,12 +321,13 @@ class MyGame(arcade.Window):
                 self.ammo_full = True
                 #  arcade.play_sound(self.reload_sound)
 
-        zombie = self.zombie_list[0]
-        self.path = arcade.astar_calculate_path(zombie.position,
+        for zombie in self.zombie_list:
+            self.path = arcade.astar_calculate_path(zombie.position,
                                                 self.player_sprite.position,
                                                 self.barrier_list,
-                                                diagonal_movement=False)
-        self.zombie_list.update()
+                                                diagonal_movement=False)"""
+        self.position_list = self.path
+
         self.scroll_to_player()
 
     def on_draw(self):
