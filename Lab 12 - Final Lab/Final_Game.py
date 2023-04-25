@@ -9,37 +9,13 @@ Controls:
 A = left
 D = Right
 Space = Jump
+Pickup ammo = E + hit the ammo
 
 Purpose of the game:
 Spawn in with a gun. The player can pick up ammo. Zombies spawn randomly and pathfind to the player. 3 hits from a 
 zombie and game over. 2 bullets to kill a zombie.
 As the game progress the zombie spawning will increase and it will take more bullets to kill them and they will 
 walk faster.
-
-Right now, my biggest issue is with getting the zombie to pathfind and move. I'm also 
-trying to figure out how to loop the map. I want it so that you can just walk from one end to 
-the other and it will continue. I'm thinking about doing a player_sprite_center conditional statement and if it meets 
-the requirements then it will update the center of the player to the other side of the map but I don't want it to jump.
-I want it to appear as though the player hasn't moved and he's just continuing to walk forward. 
-I then need to get the zombie coded in
-
-Largest obstacle for me during this whole process is that the examples I'm pulling from all use different styles. One 
-will have their zombie in the MyGame class and the other one will have it in it's own separate class so I'm having 
-trouble figuring out how to implement and specific example into the code I've already reference/written
-
-
-Current issue: 
-(1)The zombie spawns at 0,0 below the map. If I set his spawn point using zombie.center_x or center_y,
-then no pathfind line is drawn and it  only "pathfinds" when I am on top of the zombie. It only pathfinds for about a 
-64 by 64 pixel radius around the zombie.
-The pathfind line is also only ever vertical and is draw at 0,0 upwards ina straight line no matter where I am. In order
-to see the line you have to walk left towards the edge of the map while jumping because the line only shows when the 
-player is jumping
-
-(2) The zombie also wont move even though I called the function (Zombie) to move the zombie. Biggest thing right now is
-that I'm trying to code things that I don't really know how they work
-
-(3) It only pathfinds when I jump
 """
 
 
@@ -322,10 +298,8 @@ class MyGame(arcade.Window):
                 #  arcade.play_sound(self.reload_sound)
 
         for zombie in self.zombie_list:
-            self.path = arcade.astar_calculate_path(zombie.position,
-                                                self.player_sprite.position,
-                                                self.barrier_list,
-                                                diagonal_movement=False)"""
+            self.path = arcade.astar_calculate_path(zombie.position, self.player_sprite.position, self.barrier_list,
+                                                    diagonal_movement=False)
         self.position_list = self.path
 
         self.scroll_to_player()
