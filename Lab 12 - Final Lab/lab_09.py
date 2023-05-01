@@ -162,7 +162,7 @@ class MyGame(arcade.Window):
                     self.wall_list.append(wall)
         #  Make sure ammo isn't on the walls
         for i in range(AMMO_COUNT):
-            ammo = arcade.Sprite("ammo2", AMMO_SCALE)
+            ammo = arcade.Sprite("../Lab 08 - Sprites/ammo2", AMMO_SCALE)
             ammo_placed_successfully = False
 
             while not ammo_placed_successfully:
