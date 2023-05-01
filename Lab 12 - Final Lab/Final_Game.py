@@ -17,12 +17,12 @@ class MyGame(arcade.Window):
 
         #  Zombie related
         self.zombie_list = None
+        self.zombie_bullet_hit_sound = arcade.load_sound("zombie_bullet.mp3")
         #  Bullet/ammo related
         self.direction = True
         self.bullet_list = None  # A list of the visible projectiles
         self.ammo_hit_list = None
         self.ammo_full = True
-        self.food_pickup_sound = arcade.load_sound("confirmation_004.ogg")
         self.gun_shot = arcade.load_sound("gun_shot.mp3")
         self.ammo_pickup_sound = arcade.load_sound("gun_reload.mp3")
         self.ammo_list = None  # A list of the floating ammo images that are used for reloading
@@ -30,6 +30,7 @@ class MyGame(arcade.Window):
         self.mag_amount = None
         self.ammo_amount = None
         #  Wall/map related
+        self.round_change_sound = arcade.load_sound("round_change.mp3")
         self.wall_hit_list = None
         self.wall_list = None
         self.background = None
@@ -53,8 +54,10 @@ class MyGame(arcade.Window):
         self.food_list = None
         self.food_sprite = None
         self.food_sound = None
+        self.food_pickup_sound = arcade.load_sound("confirmation_004.ogg")
 
         #  Power-up related
+        self.power_up_hit_list = None
         self.power_up_list = None
         self.power_up_sound = None
         self.power_up_number = None
@@ -80,7 +83,7 @@ class MyGame(arcade.Window):
         self.camera_gui = arcade.Camera(CONSTANTS.DEFAULT_SCREEN_WIDTH, CONSTANTS.DEFAULT_SCREEN_HEIGHT)
 
     def setup(self):
-        self.spawn = [6118, 2974]
+        self.spawn = [6118, 3038]
         self.total_time = 0.0
         self.round_delay = 0.0
         self.score = 0
@@ -123,8 +126,8 @@ class MyGame(arcade.Window):
         for i in range(CONSTANTS.AMMO_COUNT):
             ammo = arcade.Sprite("bro.png", CONSTANTS.AMMO_SCALE)
             ammo_placed_successfully = False
-            ammo.center_x = random.randrange(1067, 12500)
-            ammo.center_y = 1450
+            ammo.center_x = random.randrange(1067, 12400)
+            ammo.center_y = 2143
             while not ammo_placed_successfully:
                 self.ammo_hit_list = arcade.check_for_collision_with_list(ammo, self.ammo_list)
                 self.wall_hit_list = arcade.check_for_collision_with_list(ammo, self.wall_list)
@@ -168,17 +171,18 @@ class MyGame(arcade.Window):
                 hit_list = arcade.check_for_collision_with_list(bullet, self.zombie_list)
                 hit_list2 = arcade.check_for_collision_with_list(bullet, self.wall_list)
                 if len(hit_list) > 0:
+                    arcade.play_sound(self.zombie_bullet_hit_sound)
                     for zombie in hit_list:
                         zombie.hit_count -= 1
                         if zombie.hit_count <= 0:
                             zombie.remove_from_sprite_lists()
-                            #if self.round_count > 5:
-                                #number = random.randrange(1, 4)
-                                #if number == 2:
-                            self.power_up_list[0].center_x = zombie.center_x
-                            self.power_up_list[0].center_y = 2143
+                            if self.round_count > 5:
+                                number = random.randrange(1, 8)
+                                if number == 4:
+                                    self.power_up_list[0].center_x = zombie.center_x
+                                    self.power_up_list[0].center_y = 2143
 
-                        self.score += 10
+                        self.score += 50
                     bullet.remove_from_sprite_lists()
 
                 elif len(hit_list2) > 0:
@@ -210,6 +214,7 @@ class MyGame(arcade.Window):
                 self.round_delay += delta_time
                 self.total_time = self.round_delay
                 if round(self.round_delay, 1) == 8.0:
+                    arcade.play_sound(self.round_change_sound)
                     self.round_delay = 0
                     self.round_count += 1
                     self.on_round_change(self.score, self.round_count, CONSTANTS.AMMO_COUNT, CONSTANTS.FOOD_AMOUNT,
@@ -251,6 +256,7 @@ class MyGame(arcade.Window):
                 if len(zombie_player_hit_list) > 0:
                     self.player_sprite.position = self.spawn
                     CONSTANTS.PLAYER_SPEED = 4
+                    CONSTANTS.JUMP_SPEED = 10.5
                     zombie.remove_from_sprite_lists()
                     for player in self.player_list:
                         player.hit_count_player -= 1
@@ -258,11 +264,15 @@ class MyGame(arcade.Window):
                             self.game_over = True
 
             for power_up in self.power_up_list:
-                power_up_hit_list = arcade.check_for_collision_with_list(power_up, self.player_list)
-                if len(power_up_hit_list) != 0 and self.e_pressed:
-                    arcade.play_sound(self.power_up_sound)
-                    power_up.remove_from_sprite_lists()
-                    CONSTANTS.PLAYER_SPEED *= 2
+                self.power_up_hit_list = arcade.check_for_collision_with_list(power_up, self.player_list)
+                if len(self.power_up_hit_list) != 0 and self.e_pressed:
+                    self.power_up_on = True
+                    if self.score >= 300:
+                        self.score -= 300
+                        arcade.play_sound(self.power_up_sound)
+                        power_up.remove_from_sprite_lists()
+                        CONSTANTS.PLAYER_SPEED *= 2
+                        CONSTANTS.JUMP_SPEED *= 1.5
 
             self.scroll_to_player()
 
@@ -285,7 +295,7 @@ class MyGame(arcade.Window):
         self.camera_gui.use()
 
         score = f"Score: {self.score}"
-        arcade.draw_text(score, 10, 200, arcade.color.WHITE, 14)
+        arcade.draw_text(score, 10, 200, arcade.color.RED, 14)
 
         arcade.draw_rectangle_filled(self.width // 2,
                                      20,
@@ -314,12 +324,17 @@ class MyGame(arcade.Window):
 
         health = f"Lives left: {self.player_sprite.hit_count_player}"
         arcade.draw_text(health, 10, 300, arcade.color.RED, 24)
-        count = self.round_delay
-        if self.round_delay < 8.00:
-            arcade.draw_text(count, 2200, 2197,
-                             arcade.color.RED, 24)
+        if self.round_delay < 8.00 and len(self.zombie_list) == 0:
+            arcade.draw_text("ROUND CHANGE", (CONSTANTS.DEFAULT_SCREEN_WIDTH // 2) - 140,
+                             CONSTANTS.DEFAULT_SCREEN_HEIGHT // 2, arcade.color.RED, 24)
 
         arcade.draw_text(f"Zombies left: {len(self.zombie_list)}", 10, 450, arcade.color.RED, 20)
+
+        if len(self.power_up_hit_list) != 0 and self.score < 300:
+            arcade.draw_text("Score is less than 300. Can't unlock power-up",
+                             (CONSTANTS.DEFAULT_SCREEN_WIDTH / 2) - 350,
+                             CONSTANTS.DEFAULT_SCREEN_HEIGHT / 2,
+                             arcade.color.RED, 24)
 
     def on_key_press(self, key, modifiers):
         if key == arcade.key.A:
@@ -368,13 +383,12 @@ class MyGame(arcade.Window):
     def on_round_change(self, score, round_count, ammo_amount, food_amount, power_up_amount):
         self.score = score
         self.round_count = round_count
-        self.power_up_on = False
         CONSTANTS.PLAYER_SPEED = 4
+        CONSTANTS.JUMP_SPEED = 10.5
         ammo_amount = ammo_amount
         food_amount = food_amount
         power_up_amount = power_up_amount
 
-        round_text = "ROUND CHANGE"
         for i in range(int(self.round_count ** 1.2)):
             zombie = ZOMBIES.Zombie("character_zombie_idle.png", CONSTANTS.SPRITE_SCALING)
             zombie.change_x *= 1.1
@@ -412,6 +426,12 @@ class MyGame(arcade.Window):
         for i in range(int(power_up_amount * self.round_count)):
             power_up = arcade.Sprite("fast.png", .05)
             self.power_up_list.append(power_up)
+
+        if len(self.power_up_hit_list) != 0 and self.score < 300:
+            arcade.draw_text("Score is less than 300. Can't unlock power-up",
+                             (CONSTANTS.DEFAULT_SCREEN_WIDTH / 2) - 350,
+                             CONSTANTS.DEFAULT_SCREEN_HEIGHT / 2,
+                             arcade.color.RED, 24)
 
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int):
         if not self.game_over and not self.pause:
