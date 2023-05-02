@@ -36,8 +36,7 @@ class MyWindow(arcade.Window):
 
         @start_button.event("on_click")
         def on_click_start(event):
-            window = Final_Game.MyGame(CONSTANTS.DEFAULT_SCREEN_WIDTH, CONSTANTS.DEFAULT_SCREEN_HEIGHT, CONSTANTS.SCREEN_TITLE)
-            window.setup()
+            Final_Game.main()
 
         @quit_button.event("on_click")
         def on_click_quit(event):
