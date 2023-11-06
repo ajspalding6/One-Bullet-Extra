@@ -1,0 +1,49 @@
+# One Bullet Extra - Zombie Survival Game
+
+This is a simple zombie survival game called "One Bullet Extra" built using the Arcade library in Python. In this game, your objective is to survive as many rounds as possible against a horde of zombies by collecting ammo, health, and power-ups and scoring points by eliminating zombies. 
+
+## How to Play
+- Move left: Left Arrow Key (←)
+- Move right: Right Arrow Key (→)
+- Jump: Spacebar
+- Shoot: Mouse Click
+- Pick up items (bullets, apples, power-ups): E
+- Pause/Unpause: ESC
+
+## Game Rules
+- Zombies take 3 hits to die.
+- The player starts with 1 life and has a maximum of 5.
+- Power-ups stack and can be unlocked with a score of 300 points.
+
+## Controls
+- Use the left and right arrow keys to move the player.
+- Press the spacebar to make the player jump.
+- Click with the mouse to shoot zombies.
+- Use the "E" key to pick up items like bullets, apples, and power-ups.
+- Press "ESC" to pause and unpause the game.
+
+## Game Features
+- You need to survive as many rounds as possible by defeating zombies.
+- Collect ammo to reload your gun.
+- Collect apples to gain extra lives.
+- Unlock power-ups with a score of 300 points to enhance your abilities.
+
+## Dependencies
+This game uses the Arcade library and requires Pyglet.
+
+## Game Development Credits
+- Developed by: [Your Name]
+- Background music: [Chosic](https://www.chosic.com/download-audio/25499/)
+- Player damage sound: [Freesound](https://freesound.org/people/Raclure/sounds/458867/)
+- Zombie hit sound: [Fesliyan Studios](https://www.fesliyanstudios.com/sound-effects-search.php?q=zombie+aggressive+attack)
+- Gunshot sound: [Mixkit](https://mixkit.co/free-sound-effects/gun/)
+- Round change sound: [Fesliyan Studios](https://www.fesliyanstudios.com/sound-effects-search.php?q=Zombie+breath)
+- Food pickup sound: [Kenney](https://kenney.nl/assets/interface-sounds)
+
+## Acknowledgments
+- Main zombie image and other character images are from [Kenney's platformer characters](https://kenney.nl/assets/platformer-characters).
+
+## License
+This game and its assets are for educational and non-commercial purposes only. Please review the licenses of individual assets for usage restrictions.
+
+Have fun playing "One Bullet Extra" and see how many rounds you can survive!
