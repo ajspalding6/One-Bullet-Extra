@@ -1,2 +1,0 @@
-import CONSTANTS
-import arcade
