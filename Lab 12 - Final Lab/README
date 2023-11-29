@@ -32,7 +32,7 @@ This is a simple zombie survival game called "One Bullet Extra" built using the 
 This game uses the Arcade library and requires Pyglet.
 
 ## Game Development Credits
-- Developed by: [Your Name]
+- Developed by: Aaron Spalding
 - Background music: [Chosic](https://www.chosic.com/download-audio/25499/)
 - Player damage sound: [Freesound](https://freesound.org/people/Raclure/sounds/458867/)
 - Zombie hit sound: [Fesliyan Studios](https://www.fesliyanstudios.com/sound-effects-search.php?q=zombie+aggressive+attack)
