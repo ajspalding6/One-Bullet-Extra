@@ -1,4 +1,4 @@
-name = "Aaron Spalding"
+name = "aspalding"
 print("Hello World")
 print("This is a test program to compute outputting text")
 print("\tThis line is tabbed")
